@@ -7,9 +7,12 @@ from pipeline.stages import (
     stage6_output,
 )
 from pathlib import Path
+from datetime import datetime
+import shutil
 import tempfile
 import time
 
+from pipeline.core.content_strategy import ContentStrategy
 from pipeline.path_utils import canonical_path, output_path, path_from, write_concat_file
 from pipeline.stages.stage2_5_viral_intelligence import run as viral_intelligence_run
 from pipeline.core.video_spec import VideoSpec, ensure_video_spec
@@ -105,4 +108,47 @@ def run(
         "manifest_path": result.get("manifest_path"),
         "total_runtime_seconds": round(time.time() - t_start, 2),
         "warnings": warnings,
+    }
+
+
+def run_batch(strategy: ContentStrategy) -> dict:
+    if not isinstance(strategy, ContentStrategy):
+        raise TypeError("strategy must be a ContentStrategy")
+
+    specs = strategy.generate_video_specs()
+    batch_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    batch_dir = output_path(
+        Path.cwd(),
+        "batches",
+        batch_id,
+        strategy.niche,
+    )
+    video_paths = []
+
+    for index, spec in enumerate(specs, start=1):
+        result = run(spec)
+        source = Path(result["video_path"])
+        if not source.is_file():
+            raise PipelineError("batch", FileNotFoundError(source))
+
+        video_dir = path_from(batch_dir, f"video_{index}")
+        video_dir.mkdir(parents=True, exist_ok=True)
+        destination = path_from(video_dir, "final.mp4")
+        shutil.copy2(source, destination)
+        video_paths.append(str(destination))
+
+    return {
+        "batch_id": batch_id,
+        "batch_dir": str(batch_dir),
+        "video_paths": video_paths,
+        "video_specs": specs,
+        "variation_summary": {
+            "varied_fields": ["topic", "hook_type", "emotional_curve"],
+            "fixed_fields": [
+                "duration_seconds",
+                "platform",
+                "beat_count",
+            ],
+            "monetisation_goal": strategy.monetisation_goal,
+        },
     }

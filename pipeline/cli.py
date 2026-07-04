@@ -1,4 +1,6 @@
 import argparse
+from dataclasses import asdict
+import json
 from pathlib import Path
 import subprocess
 from typing import Sequence
@@ -58,12 +60,33 @@ def run_pipeline(work_dir: Path):
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="run_ai_media_factory")
-    parser.add_argument("topic", nargs="+", help="video topic")
+    parser.add_argument("inputs", nargs="+", help="topic or: batch topic1,topic2")
     args = parser.parse_args(argv)
 
-    from pipeline.orchestrator import run
+    from pipeline.orchestrator import run, run_batch
 
-    run(" ".join(args.topic))
+    if args.inputs[0] == "batch":
+        if len(args.inputs) != 2:
+            parser.error("batch mode requires one comma-separated topic list")
+        topics = [topic.strip() for topic in args.inputs[1].split(",") if topic.strip()]
+        if not topics:
+            parser.error("batch mode requires at least one topic")
+
+        from pipeline.core.content_strategy import ContentStrategy
+
+        result = run_batch(
+            ContentStrategy(
+                niche=topics[0] if len(topics) == 1 else "mixed",
+                topics=topics,
+            )
+        )
+        serialisable = dict(result)
+        serialisable["video_specs"] = [
+            asdict(spec) for spec in result["video_specs"]
+        ]
+        print(json.dumps(serialisable, indent=2))
+    else:
+        run(" ".join(args.inputs))
     return 0
 
 
