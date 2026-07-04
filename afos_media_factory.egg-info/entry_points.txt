@@ -1,0 +1,2 @@
+[console_scripts]
+run_ai_media_factory = pipeline.cli:main

@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: afos-media-factory
+Version: 0.1.0
+Summary: AFOS Autonomous AI Media Factory - MVP pipeline
+Requires-Python: >=3.10

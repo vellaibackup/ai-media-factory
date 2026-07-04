@@ -1,0 +1,42 @@
+{
+  "topic": "England reach the World Cup quarter-finals",
+  "generated_at_utc": "2026-07-03T22:05:08.013611+00:00",
+  "pipeline_version": "mvp-day1",
+  "script_source": "local_template",
+  "beats": [
+    {
+      "text": "England reach the World Cup quarter-finals -- here's what you need to know.",
+      "seconds": 7.5
+    },
+    {
+      "text": "Right now, England reach the World Cup quarter-finals is one of the biggest storylines in football.",
+      "seconds": 7.5
+    },
+    {
+      "text": "Fans everywhere are reacting, and the numbers back it up.",
+      "seconds": 7.5
+    },
+    {
+      "text": "Follow for more updates as this story develops.",
+      "seconds": 7.5
+    }
+  ],
+  "voice_engine": "flite",
+  "video_format": "1080x1920",
+  "stage_timings_seconds": {
+    "stage1_script": 0.0,
+    "stage2_voice": 0.55,
+    "stage3_visuals": 11.9,
+    "stage4_assembly": 0.33,
+    "stage5_format": 7.85
+  },
+  "total_runtime_seconds": 20.63,
+  "warnings": [
+    "Stage 1 used the local template fallback (no LLM API key configured)."
+  ],
+  "known_limitations": [
+    "Visuals are FFmpeg template motion graphics, not AI-generated video (by design for this MVP).",
+    "Voice is ffmpeg's offline flite TTS, a temporary substitute for Kokoro/Chatterbox-Turbo pending network access to download those models.",
+    "Script generation used the local template fallback unless script_source shows an LLM provider."
+  ]
+}
