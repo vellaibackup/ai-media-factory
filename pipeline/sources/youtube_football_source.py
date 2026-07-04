@@ -5,6 +5,8 @@ import pickle
 import subprocess
 from pathlib import Path
 
+from pipeline.path_utils import canonical_path
+
 # ----------------------------
 # USE STABLE YOUTUBE SCOPE
 # ----------------------------
@@ -15,7 +17,7 @@ SCOPES = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 # PROJECT ROOT
 # ----------------------------
 def get_project_root():
-    return Path(__file__).resolve().parents[2]
+    return canonical_path(__file__).parents[2]
 
 
 def get_paths():
@@ -127,4 +129,4 @@ def get_latest_football_clip(work_dir: Path):
 
     download_video(video["video_id"], str(output_file))
 
-    return str(output_file)vi
+    return str(output_file)

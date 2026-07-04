@@ -12,4 +12,4 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["pipeline", "pipeline.stages"]
+packages = ["pipeline", "pipeline.core", "pipeline.stages"]

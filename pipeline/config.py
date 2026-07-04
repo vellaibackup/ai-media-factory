@@ -9,7 +9,9 @@ See pipeline/LIMITATIONS.md for what's real vs. stubbed today.
 import os
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+from pipeline.path_utils import canonical_path
+
+REPO_ROOT = canonical_path(__file__).parent.parent
 OUTPUT_DIR = REPO_ROOT / "output"
 
 # --- Video format ---

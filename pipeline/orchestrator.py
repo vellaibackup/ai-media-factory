@@ -10,6 +10,10 @@ from pathlib import Path
 import tempfile
 import time
 
+from pipeline.path_utils import canonical_path, output_path, path_from, write_concat_file
+from pipeline.stages.stage2_5_viral_intelligence import run as viral_intelligence_run
+from pipeline.core.video_spec import VideoSpec, ensure_video_spec
+
 
 class PipelineError(Exception):
     def __init__(self, stage: str, original: Exception):
@@ -18,37 +22,63 @@ class PipelineError(Exception):
         super().__init__(f"[{stage}] {original}")
 
 
-def run(topic: str, output_dir: Path | None = None) -> dict:
+def run(
+    video_spec: VideoSpec | dict | str,
+    output_dir: Path | None = None,
+) -> dict:
+    spec = ensure_video_spec(video_spec)
     t_start = time.time()
     warnings = []
 
     with tempfile.TemporaryDirectory(prefix="afos_run_") as tmp:
-        work_dir = Path(tmp)
+        work_dir = canonical_path(tmp)
+
+        for directory in (
+            path_from(work_dir, "assembly"),
+            output_path(work_dir, "visuals"),
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
 
         # -------------------
         # Stage 1
         # -------------------
-        script = stage1_script.run(topic)
-        if script.get("source") == "local_template":
+        script_data = stage1_script.run(spec)
+        if script_data.get("source") == "local_template":
             warnings.append("Stage 1 fallback used")
 
         # -------------------
         # Stage 2
         # -------------------
-        voice = stage2_voice.run(script, work_dir)
+        voice = stage2_voice.run(script_data, work_dir, spec)
+
+        try:
+            viral_plan = viral_intelligence_run(script_data, spec)
+        except Exception:
+            viral_plan = None
 
         # -------------------
         # Stage 3
         # -------------------
-        visuals = stage3_visuals.run(script, voice["beat_durations"], work_dir)
+        visuals = stage3_visuals.run(
+            script_data,
+            voice["beat_durations"],
+            work_dir,
+            viral_plan=viral_plan,
+            video_spec=spec,
+        )
 
         # -------------------
         # Stage 4
         # -------------------
-        assembly = stage4_assembly.run(
+        concat_file = write_concat_file(
+            output_path(work_dir, "visuals", "video_concat_list.txt"),
             visuals["clip_paths"],
+        )
+        assembly = stage4_assembly.run(
+            concat_file,
             voice["audio_path"],
-            work_dir
+            work_dir,
+            spec,
         )
 
         # -------------------

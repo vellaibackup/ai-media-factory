@@ -4,14 +4,15 @@ Goal: convert topic → engaging short-form video beats
 """
 
 from __future__ import annotations
-import random
+
+from pipeline.core.video_spec import VideoSpec, ensure_video_spec
 
 
 class Stage1Error(Exception):
     pass
 
 
-def run(topic: str) -> dict:
+def run(video_spec: VideoSpec | dict | str) -> dict:
     """
     Generates structured beats for short-form video.
     """
@@ -20,37 +21,34 @@ def run(topic: str) -> dict:
     # SIMPLE INTELLIGENCE LAYER
     # -------------------------
 
-    hooks = [
-        f"You won't believe this about {topic}",
-        f"This is why {topic} is trending right now",
-        f"The most insane moment in {topic}",
-    ]
+    try:
+        spec = ensure_video_spec(video_spec)
+    except (TypeError, ValueError) as exc:
+        raise Stage1Error(str(exc)) from exc
 
+    seconds_per_beat = round(spec.duration_seconds / spec.beat_count, 2)
+    templates = (
+        "{hook_type}: the overlooked detail about {topic}",
+        "Here is what actually happened in {topic}",
+        "The key mechanism changes how {topic} should be understood",
+        "The consequence is why people are discussing {topic}",
+        "{cta_type}: decide what happens next for {topic}",
+    )
     beats = [
         {
-            "text": random.choice(hooks),
-            "seconds": 2.5,
-        },
-        {
-            "text": f"Here’s what actually happened in {topic}",
-            "seconds": 3.0,
-        },
-        {
-            "text": f"The key moment changed everything in {topic}",
-            "seconds": 3.5,
-        },
-        {
-            "text": f"This is why fans are talking about {topic}",
-            "seconds": 2.5,
-        },
-        {
-            "text": f"Final takeaway: {topic} moments like this go viral for a reason",
-            "seconds": 3.0,
-        },
+            "text": templates[index % len(templates)].format(
+                topic=spec.topic,
+                hook_type=spec.hook_type,
+                cta_type=spec.cta_type,
+            ),
+            "seconds": min(spec.max_clip_length, seconds_per_beat),
+        }
+        for index in range(spec.beat_count)
     ]
 
     return {
-        "topic": topic,
+        "topic": spec.topic,
         "beats": beats,
-        "source": "intelligent_v1"
+        "source": "intelligent_v1",
+        "video_spec": spec,
     }

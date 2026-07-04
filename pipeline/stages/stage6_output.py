@@ -2,6 +2,8 @@ from pathlib import Path
 import shutil
 import time
 
+from pipeline.path_utils import output_path, path_from
+
 
 def run(result, work_dir: Path, *args, **kwargs):
     """
@@ -9,10 +11,10 @@ def run(result, work_dir: Path, *args, **kwargs):
     Always returns video_path + manifest_path
     """
 
-    base_output = Path("output/football")
+    base_output = output_path(Path.cwd(), "football")
 
     run_id = time.strftime("run_%Y%m%d_%H%M%S")
-    run_dir = base_output / run_id
+    run_dir = path_from(base_output, run_id)
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # -----------------------------
@@ -28,7 +30,7 @@ def run(result, work_dir: Path, *args, **kwargs):
         )
 
     if isinstance(video_path, str) and Path(video_path).exists():
-        shutil.copy(video_path, run_dir / "video.mp4")
+        shutil.copy(video_path, path_from(run_dir, "video.mp4"))
 
     # -----------------------------
     # FIND MANIFEST SAFELY
@@ -39,12 +41,12 @@ def run(result, work_dir: Path, *args, **kwargs):
         manifest_path = result.get("manifest_path")
 
     if isinstance(manifest_path, str) and Path(manifest_path).exists():
-        shutil.copy(manifest_path, run_dir / "manifest.json")
+        shutil.copy(manifest_path, path_from(run_dir, "manifest.json"))
 
     # -----------------------------
     # ALWAYS RETURN SAME STRUCTURE
     # -----------------------------
     return {
-        "video_path": str(run_dir / "video.mp4"),
-        "manifest_path": str(run_dir / "manifest.json"),
+        "video_path": str(path_from(run_dir, "video.mp4")),
+        "manifest_path": str(path_from(run_dir, "manifest.json")),
     }

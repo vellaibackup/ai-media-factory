@@ -1,12 +1,22 @@
 from pathlib import Path
 import subprocess
 
+from pipeline.core.video_spec import VideoSpec, ensure_video_spec
+
 
 class Stage3Error(Exception):
     pass
 
 
-def run(script: dict, beat_durations: list[float], work_dir: Path):
+def run(
+    script: dict,
+    beat_durations: list[float],
+    work_dir: Path,
+    viral_plan: dict | None = None,
+    video_spec: VideoSpec | dict | str | None = None,
+):
+    if video_spec is not None:
+        ensure_video_spec(video_spec)
 
     beats = script.get("beats")
     if not beats:
@@ -58,5 +68,6 @@ def run(script: dict, beat_durations: list[float], work_dir: Path):
         outputs.append(str(out_path))
 
     return {
-        "clip_paths": outputs
+        "clip_paths": outputs,
+        "viral_plan": viral_plan,
     }

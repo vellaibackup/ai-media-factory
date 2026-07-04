@@ -8,6 +8,8 @@ import subprocess
 import wave
 from pathlib import Path
 from pipeline import config
+from pipeline.path_utils import ffconcat_path
+from pipeline.core.video_spec import VideoSpec, ensure_video_spec
 
 
 class Stage2Error(Exception):
@@ -55,7 +57,7 @@ def _concat_wavs(paths: list[Path], out_path: Path) -> None:
 
     with open(concat_file, "w") as f:
         for p in paths:
-            f.write(f"file '{p.resolve()}'\n")
+            f.write(f"file '{ffconcat_path(p)}'\n")
 
     subprocess.run([
         "ffmpeg",
@@ -68,7 +70,13 @@ def _concat_wavs(paths: list[Path], out_path: Path) -> None:
     ], check=True)
 
 
-def run(script: dict, work_dir: Path) -> dict:
+def run(
+    script: dict,
+    work_dir: Path,
+    video_spec: VideoSpec | dict | str | None = None,
+) -> dict:
+    if video_spec is not None:
+        ensure_video_spec(video_spec)
     beats = script.get("beats")
     if not beats:
         raise Stage2Error("No beats found")
