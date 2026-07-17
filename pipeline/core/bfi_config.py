@@ -121,6 +121,38 @@ OFFICIAL_HIGHLIGHT_PHRASES = (
     "official broadcast",
 )
 
+# ---------------------------------------------------------------------------
+# Sprint C: performance (pipeline/orchestrator.py, media_usability.py)
+# ---------------------------------------------------------------------------
+# Duration gate applied before any usability download. The minimum is the
+# story's own recommended_duration (checked at the call site); the maximum
+# here is a generous ceiling so legitimate long compilations still pass --
+# it only exists to catch obvious full-match/full-broadcast uploads before
+# they get downloaded in full.
+MAX_CANDIDATE_DURATION_SECONDS = _float_env("BFI_MAX_CANDIDATE_DURATION_SECONDS", 1200.0)
+
+# Only this many top-ranked (by verification score / relevance / confidence --
+# signals already known from search, no download required) candidates get a
+# usability download+motion-check at all.
+USABILITY_TOP_K = int(_float_env("BFI_USABILITY_TOP_K", 5))
+
+# Stop the usability gate early once this many candidates are confirmed
+# usable (or the shortlist is exhausted, if fewer are usable). Deliberately
+# no single-candidate "excellent score" short-circuit here: motion score is
+# not a proxy for broadcast-footage editorial quality, and stopping on one
+# candidate's score alone let a prediction/reaction-style clip win by
+# default before a better candidate was ever assessed (Sprint C.1).
+USABILITY_STOP_AFTER_USABLE_COUNT = int(_float_env("BFI_USABILITY_STOP_AFTER_USABLE_COUNT", 2))
+
+# ---------------------------------------------------------------------------
+# Sprint D: content-format gate (pipeline/core/content_format_gate.py)
+# ---------------------------------------------------------------------------
+# Deliberately large relative to score_candidate()'s ~100-point normal range:
+# a prediction/preview/studio/breakdown/recap/discussion/meme/analysis clip
+# must reliably lose to a genuine highlight of similar technical quality,
+# not just lose by a marginal amount that other factors could still flip.
+LOW_VALUE_FORMAT_PENALTY = _float_env("BFI_LOW_VALUE_FORMAT_PENALTY", 50.0)
+
 __all__ = [
     "VERIFICATION_THRESHOLD",
     "EVENT_MATCH_THRESHOLD",
@@ -137,4 +169,8 @@ __all__ = [
     "PLAYER_ALIASES",
     "OFFICIAL_BROADCAST_CHANNELS",
     "OFFICIAL_HIGHLIGHT_PHRASES",
+    "MAX_CANDIDATE_DURATION_SECONDS",
+    "USABILITY_TOP_K",
+    "USABILITY_STOP_AFTER_USABLE_COUNT",
+    "LOW_VALUE_FORMAT_PENALTY",
 ]

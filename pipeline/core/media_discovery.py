@@ -11,6 +11,7 @@ import subprocess
 from typing import Any, Callable, Iterable
 
 from pipeline.core import bfi_config
+from pipeline.core.content_format_gate import is_low_value_format
 from pipeline.core.content_type_filter import classify_rejected_content, is_rejected_content
 from pipeline.core.entity_matching import player_mentioned
 from pipeline.core.football_intelligence import FootballStory
@@ -165,6 +166,11 @@ class MediaDiscovery:
         self._max_live_search_calls = max(0, int(max_live_search_calls))
         self._local_media_dir = Path(local_media_dir)
         self.diagnostics: dict[str, Any] = {}
+        # Populated by discover() with the full VerificationResult (score,
+        # matched/missing entities, reason) for every accepted candidate,
+        # keyed by candidate.url -- so callers (e.g. run_football_mvp) can
+        # reuse the verification already done here instead of re-verifying.
+        self.verification_results: dict[str, Any] = {}
 
     def discover(self, story: FootballStory) -> list[CandidateClip]:
         if not isinstance(story, FootballStory):
@@ -225,6 +231,7 @@ class MediaDiscovery:
             item for item in verification
             if item.accepted and item.candidate.confidence >= bfi_config.ACCEPTANCE_CONFIDENCE_THRESHOLD
         ]
+        self.verification_results = {item.candidate.url: item for item in accepted}
         used_local_fallback = any(item.get("source") == "local" for item in deduplicated)
         if discovery_run.quota_error and not accepted and not used_local_fallback:
             self.diagnostics = _empty_diagnostics(
@@ -560,7 +567,7 @@ def _relevance(
         else _entity_score((story.competition,), folded_candidate)
     )
     event_score = _event_relevance_score(_event_phrase(story), folded_candidate)
-    source_quality = _source_quality_score(title, channel)
+    source_quality = _source_quality_score(title, channel, description)
 
     duration_bonus = 0.0
     if duration > 0:
@@ -597,8 +604,16 @@ def _player_entity_score(players: Iterable[str], text: str) -> float:
     return sum(1 for item in values if player_mentioned(item, text)) / len(values)
 
 
-def _source_quality_score(title: str, channel: str) -> float:
-    """Strongly prefer official match highlights / broadcast footage."""
+def _source_quality_score(title: str, channel: str, description: str = "") -> float:
+    """Strongly prefer official match highlights / broadcast footage --
+    but only for genuine match/highlight content (Sprint D). A prediction,
+    preview, studio, breakdown, recap, discussion, meme, or analysis video
+    must not receive this bonus just because it was uploaded by an official
+    broadcaster: official-channel status alone must never outweigh the
+    wrong content format.
+    """
+    if is_low_value_format(title, description):
+        return 0.0
     if channel and any(
         source.casefold() == channel.casefold() for source in bfi_config.OFFICIAL_BROADCAST_CHANNELS
     ):

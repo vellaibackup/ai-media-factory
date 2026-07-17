@@ -11,7 +11,6 @@ from pipeline.core.content_type_filter import classify_rejected_content
 from pipeline.core.entity_matching import player_mentioned
 from pipeline.core.football_intelligence import FootballStory
 from pipeline.core.media_discovery import CandidateClip
-from pipeline.editing.professional_sports_editor import youtube_metadata
 
 
 VERIFICATION_THRESHOLD = bfi_config.VERIFICATION_THRESHOLD
@@ -247,10 +246,24 @@ def verify_candidate(
     )
 
 
+def no_deep_metadata_fetch(_url: str) -> dict[str, Any]:
+    """Default fetcher for broad verification: perform no per-candidate I/O.
+
+    _metadata_text() already merges candidate.title/candidate.description --
+    both already obtained from the YouTube Data API at search time -- into
+    the text used for matching, regardless of what this returns. Broad
+    verification (run across dozens of candidates) must not shell out to
+    yt-dlp per candidate just to re-fetch text the search API already gave
+    us; a real per-video probe (tags, resolution, etc.) is reserved for the
+    much smaller shortlist that reaches professional_sports_editor.rank_candidates.
+    """
+    return {}
+
+
 def verify_candidates(
     story: FootballStory,
     candidates: Iterable[CandidateClip],
-    metadata_fetcher: Callable[[str], dict[str, Any]] = youtube_metadata,
+    metadata_fetcher: Callable[[str], dict[str, Any]] = no_deep_metadata_fetch,
     threshold: float = VERIFICATION_THRESHOLD,
 ) -> list[VerificationResult]:
     results = []
@@ -276,6 +289,7 @@ __all__ = [
     "VERIFICATION_THRESHOLD",
     "VerificationResult",
     "extract_primary_event",
+    "no_deep_metadata_fetch",
     "verify_candidate",
     "verify_candidates",
 ]
